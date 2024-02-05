@@ -58,6 +58,8 @@ action:
       entity_id: !input 'media_player'
     data:
       volume_level: '{{ starting_volume / 100 }}'
+  - delay:
+      seconds: 1  # Small delay to ensure the volume is set before starting the loop
   - repeat:
       count: '{{ total_iterations }}'
       sequence:
