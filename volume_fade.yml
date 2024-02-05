@@ -46,6 +46,7 @@ variables:
   reduction_iterations: !input 'reduction_iterations'
   volume_step: '{{ (starting_volume / 100) / (reduction_timeframe / 10) }}'
   total_iterations: '{{ reduction_timeframe / 10 * reduction_iterations }}'
+  initial_volume_level: '{{ starting_volume / 100 }}'
 
 trigger:
   - platform: state
@@ -57,7 +58,7 @@ action:
     target:
       entity_id: !input 'media_player'
     data:
-      volume_level: '{{ starting_volume / 100 }}'
+      volume_level: '{{ initial_volume_level }}'
   - delay:
       seconds: 1  # Small delay to ensure the volume is set before starting the loop
   - repeat:
@@ -67,7 +68,13 @@ action:
           target:
             entity_id: !input 'media_player'
           data:
-            volume_level: '{{ [0, (state_attr(media_player, ''volume_level'') | float - volume_step) ] | max }}'
+            volume_level: >
+              {{
+                [
+                  0,
+                  (state_attr(media_player, 'volume_level') | float) - volume_step
+                ] | max
+              }}
         - delay:
             minutes: 10
   - service: media_player.media_stop
@@ -77,4 +84,4 @@ action:
     target:
       entity_id: !input 'media_player'
     data:
-      volume_level: '{{ starting_volume / 100 }}'
+      volume_level: '{{ initial_volume_level }}'
