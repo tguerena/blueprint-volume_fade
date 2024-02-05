@@ -44,7 +44,7 @@ variables:
   starting_volume: !input 'starting_volume'
   reduction_timeframe: !input 'reduction_timeframe'
   reduction_iterations: !input 'reduction_iterations'
-  volume_step: '{{ (starting_volume / (reduction_timeframe / 10)) | float }}'
+  volume_step: '{{ (starting_volume / 100) / (reduction_timeframe / 10) }}'
   total_iterations: '{{ reduction_timeframe / 10 * reduction_iterations }}'
 
 trigger:
