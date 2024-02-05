@@ -1,6 +1,6 @@
 blueprint:
   name: Gradual Volume Reducer
-  description: Reduces the volume of a media player gradually over time and resets after a certain number of iterations.
+  description: Reduces the volume of a media player gradually over time and resets after a certain number of iterations when media starts playing.
   domain: automation
   input:
     media_player:
@@ -44,36 +44,35 @@ variables:
   starting_volume: !input 'starting_volume'
   reduction_timeframe: !input 'reduction_timeframe'
   reduction_iterations: !input 'reduction_iterations'
-  volume_step: '{{ (starting_volume / reduction_timeframe) | float }}'
-  iteration: '{{ (states(''automation.gradual_volume_reducer'') | int) % reduction_iterations }}'
+  volume_step: '{{ (starting_volume / (reduction_timeframe / 10)) | float }}'
+  total_iterations: '{{ reduction_timeframe / 10 * reduction_iterations }}'
 
 trigger:
-  - platform: time_pattern
-    minutes: '/{{ reduction_timeframe }}'
-
-condition:
-  - condition: state
-    entity_id: '{{ media_player }}'
-    state: 'playing'
+  - platform: state
+    entity_id: !input 'media_player'
+    to: 'playing'
 
 action:
-  - choose:
-      - conditions: '{{ iteration < reduction_iterations }}'
-        sequence:
-          - service: media_player.volume_set
-            target:
-              entity_id: '{{ media_player }}'
-            data:
-              volume_level: '{{ [0, (state_attr(media_player, ''volume_level'') | float - volume_step) ] | max }}'
-      - conditions: '{{ iteration == reduction_iterations }}'
-        sequence:
-          - service: media_player.media_stop
-            target:
-              entity_id: '{{ media_player }}'
-          - service: media_player.volume_set
-            target:
-              entity_id: '{{ media_player }}'
-            data:
-              volume_level: '{{ starting_volume / 100 }}'
-  - delay:
-      minutes: '{{ reduction_timeframe }}'
+  - service: media_player.volume_set
+    target:
+      entity_id: !input 'media_player'
+    data:
+      volume_level: '{{ starting_volume / 100 }}'
+  - repeat:
+      count: '{{ total_iterations }}'
+      sequence:
+        - service: media_player.volume_set
+          target:
+            entity_id: !input 'media_player'
+          data:
+            volume_level: '{{ [0, (state_attr(media_player, ''volume_level'') | float - volume_step) ] | max }}'
+        - delay:
+            minutes: 10
+  - service: media_player.media_stop
+    target:
+      entity_id: !input 'media_player'
+  - service: media_player.volume_set
+    target:
+      entity_id: !input 'media_player'
+    data:
+      volume_level: '{{ starting_volume / 100 }}'
